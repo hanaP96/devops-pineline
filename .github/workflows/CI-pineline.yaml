@@ -1,5 +1,6 @@
-
 name: CI Pipeline
+
+# triggers on push to main and on PRs targeting main
 on:
   push:
     branches:
@@ -7,16 +8,42 @@ on:
   pull_request:
     branches:
       - main
-jobs: 
-  build:
+
+jobs:
+  # 1) Test job: install, run tests, collect/upload artifacts
+  test:
+    name: ci/test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Setup Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
           node-version: '14'
+
       - name: Install dependencies
         run: npm install
+
       - name: Run tests
+        # run your existing test command (adjust if needed)
         run: npm test
+
+      - name: Ensure test-reports directory exists
+        run: |
+          mkdir -p test-reports/html
+
+      - name: Collect or create JUnit XML (fallback)
+        run: |
+          # If your test runner already writes JUnit xml, adapt PATH below.
+          # This fallback will create a minimal junit xml if none exists.
+          if ls **/junit*.xml 1> /dev/null 2>&1; then
+            echo "Found existing junit xml files; copying to test-reports/"
+            mkdir -p test-reports
+            find . -type f -name "*junit*.xml" -exec cp {} test-reports/ \;
+          elif [ -f ./test-reports/junit-report.xml ]; then
+            echo "Existing test-reports/junit-report.xml kept"
+          else
+            echo "No junit xml found — creating a fallback junit-report.xml"
+            cat > test-reports/junit
